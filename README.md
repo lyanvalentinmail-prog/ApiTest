@@ -177,7 +177,7 @@ Así quedan disponibles los modelos de chat e imagen que AI/ML API mantenga acti
 | `PREMIUM_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `DAILY_LIMIT` | Usos diarios de chat/ask para no premium. | `10` |
 | `ALLOW_SELF_COMMANDS` | Permite comandos desde la propia cuenta vinculada. | `false` |
-| `PREFIX` | Prefijo de comandos. | `.` |
+| `BOT_PREFIX` | Prefijo de comandos. (No uses `PREFIX`: Termux reserva esa variable.) | `.` |
 
 Ejemplo de permisos:
 

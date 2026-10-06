@@ -31,7 +31,10 @@ await startWhatsApp();
 
 function createConfig() {
   const args = process.argv.slice(2);
-  const prefix = process.env.PREFIX || '.';
+  // Termux define $PREFIX con su ruta de instalación; no puede usarse como prefijo del bot.
+  // BOT_PREFIX es la variable preferida. Se acepta el antiguo PREFIX solo si parece un prefijo corto.
+  const legacyPrefix = process.env.PREFIX;
+  const prefix = process.env.BOT_PREFIX || (legacyPrefix && legacyPrefix.length <= 3 ? legacyPrefix : '.');
   const pairingFromArgument = readOption(args, '--pairing') || readOption(args, '--pair');
   const wantsPairing = args.includes('--pairing') || args.includes('--pair') || Boolean(pairingFromArgument);
   const wantsQr = args.includes('--qr');
