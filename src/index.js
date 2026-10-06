@@ -25,6 +25,7 @@ const state = new StateStore(config.dataFile);
 const activeRequests = new Set();
 let reconnectTimer = null;
 let terminalQuestion = null;
+let pairingRequested = false;
 
 await state.load();
 await startWhatsApp();
@@ -38,10 +39,14 @@ function createConfig() {
   const pairingFromArgument = readOption(args, '--pairing') || readOption(args, '--pair');
   const wantsPairing = args.includes('--pairing') || args.includes('--pair') || Boolean(pairingFromArgument);
   const wantsQr = args.includes('--qr');
-  const linkMethod = wantsQr ? 'qr' : wantsPairing ? 'pairing' : process.env.LINK_METHOD === 'pairing' ? 'pairing' : 'qr';
+  const configuredMethod = String(process.env.LINK_METHOD || 'ask').toLowerCase();
+  const linkMethod = wantsQr ? 'qr' : wantsPairing ? 'pairing' : configuredMethod;
   const pairingNumber = normalizePhone(pairingFromArgument || process.env.PAIRING_NUMBER || '');
 
-  if (!prefix || prefix.length > 3) throw new Error('PREFIX debe tener entre 1 y 3 caracteres.');
+  if (!prefix || prefix.length > 3) throw new Error('BOT_PREFIX debe tener entre 1 y 3 caracteres.');
+  if (!['ask', 'qr', 'pairing'].includes(linkMethod)) {
+    throw new Error('LINK_METHOD debe ser ask, qr o pairing.');
+  }
 
   return {
     apiKey: process.env.AIMLAPI_API_KEY,
@@ -79,6 +84,7 @@ function positiveInteger(value, fallback) {
 async function startWhatsApp() {
   await mkdir(config.sessionDir, { recursive: true });
   const { state: authState, saveCreds } = await useMultiFileAuthState(config.sessionDir);
+  await chooseLinkMethod(authState);
   let version;
   try {
     ({ version } = await fetchLatestBaileysVersion());
@@ -157,7 +163,41 @@ function scheduleReconnect() {
   }, 4_000);
 }
 
-let pairingRequested = false;
+/** Muestra el selector solo al vincular una sesión nueva; no molesta en reconexiones normales. */
+async function chooseLinkMethod(authState) {
+  if (authState.creds.registered || config.linkMethod !== 'ask') return;
+
+  if (!process.stdin.isTTY) {
+    config.linkMethod = 'qr';
+    console.warn('[vinculación] No hay terminal interactiva; se usará QR. Usa --pairing o LINK_METHOD=pairing para forzar código.');
+    return;
+  }
+
+  console.log('\n¿Cómo deseas vincular WhatsApp?\n  1) Código QR\n  2) Código de vinculación\n');
+  while (true) {
+    const choice = (await askTerminal('Elige 1 o 2: ')).trim();
+    if (choice === '1' || choice.toLowerCase() === 'qr') {
+      config.linkMethod = 'qr';
+      closeQuestion();
+      console.log('Se usará QR.');
+      return;
+    }
+    if (choice === '2' || ['code', 'codigo', 'código', 'pairing'].includes(choice.toLowerCase())) {
+      const phone = normalizePhone(await askTerminal('Número con código de país (solo dígitos): '));
+      if (phone.length >= 8 && phone.length <= 16) {
+        config.linkMethod = 'pairing';
+        config.pairingNumber = phone;
+        closeQuestion();
+        console.log('Se solicitará un código de vinculación.');
+        return;
+      }
+      console.log('Número inválido. Incluye el código de país, sin + ni espacios.');
+      continue;
+    }
+    console.log('Opción inválida. Escribe 1 para QR o 2 para código.');
+  }
+}
+
 async function requestPairingCode(sock) {
   if (pairingRequested) return;
   pairingRequested = true;

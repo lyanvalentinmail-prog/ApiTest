@@ -52,32 +52,42 @@ npm run check
 
 La primera vez se crea `sessions/baileys/` con las credenciales. No lo compartas ni lo subas a Git.
 
-### Opción A — QR (predeterminada)
+### Selector interactivo — QR o código (predeterminado)
+
+En una sesión nueva, ejecuta:
 
 ```bash
 npm start
-# o
-npm run qr
 ```
 
-En el móvil abre **WhatsApp → Dispositivos vinculados → Vincular un dispositivo** y escanea el QR de la terminal.
+La terminal muestra:
 
-### Opción B — Código de vinculación
+```text
+¿Cómo deseas vincular WhatsApp?
+  1) Código QR
+  2) Código de vinculación
+```
 
-Pasa el teléfono con código de país y solo dígitos:
+- Escribe **`1`** para mostrar el QR y escanéalo desde **WhatsApp → Dispositivos vinculados → Vincular un dispositivo**.
+- Escribe **`2`** para introducir tu número con prefijo de país; el bot mostrará el código de 8 dígitos.
+
+El selector solo aparece al crear una sesión. Si ya hay una sesión vinculada, el bot se reconecta directamente.
+
+### Forzar QR o código desde el comando
 
 ```bash
+npm run qr
 npm run pair -- 5215551234567
 ```
 
-También puedes declararlo en `.env`:
+También puedes fijarlo en `.env`:
 
 ```dotenv
 LINK_METHOD=pairing
 PAIRING_NUMBER=5215551234567
 ```
 
-Después ejecuta `npm start`. En WhatsApp abre **Dispositivos vinculados → Vincular un dispositivo → Vincular con número de teléfono** e introduce el código de 8 dígitos que muestra la terminal.
+En WhatsApp abre **Dispositivos vinculados → Vincular un dispositivo → Vincular con número de teléfono** e introduce el código de 8 dígitos que muestra la terminal.
 
 Para cambiar de cuenta, detén el bot y borra solo la carpeta de sesión:
 
@@ -98,7 +108,7 @@ cd ApiTest
 npm install
 cp .env.example .env
 nano .env
-npm run qr
+npm start
 ```
 
 Para vincular por código:
@@ -171,7 +181,7 @@ Así quedan disponibles los modelos de chat e imagen que AI/ML API mantenga acti
 | `AIMLAPI_API_KEY` | Clave privada de AI/ML API. Obligatoria. | — |
 | `DEFAULT_TEXT_MODEL` | Modelo inicial de chat/ask/grammar. | `google/gemma-3-4b-it` |
 | `DEFAULT_IMAGE_MODEL` | Modelo inicial de imagine. | `flux-pro` |
-| `LINK_METHOD` | `qr` o `pairing`. | `qr` |
+| `LINK_METHOD` | `ask` (selector), `qr` o `pairing`. | `ask` |
 | `PAIRING_NUMBER` | Número para código, con prefijo de país. | vacío |
 | `OWNER_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `PREMIUM_NUMBERS` | Números internacionales separados por coma. | vacío |
