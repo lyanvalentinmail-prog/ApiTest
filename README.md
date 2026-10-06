@@ -199,7 +199,6 @@ Así quedan disponibles los modelos de chat e imagen que AI/ML API mantenga acti
 | `OWNER_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `PREMIUM_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `DAILY_LIMIT` | Usos diarios de chat/ask para no premium. | `10` |
-| `ALLOW_SELF_COMMANDS` | Permite comandos desde la propia cuenta vinculada / Mensaje para ti. | `true` |
 | `BOT_NAME` | Nombre mostrado en `.menu`. | `NombreBot` |
 | `OWNER_NAME` | Propietario mostrado en `.menu`. | `Owner` |
 | `BOT_VERSION` | Versión mostrada en `.menu`. | `1.0.0` |
@@ -220,6 +219,6 @@ Los números se escriben **sin `+`, guiones ni espacios**. Owner siempre se cons
 ## Notas operativas
 
 - El modelo de imagen por defecto puede tener coste. Revisa el catálogo y saldo de AI/ML API antes de habilitar premium.
-- `ALLOW_SELF_COMMANDS=true` viene activo para que `.menu` y los demás comandos funcionen desde *Mensaje para ti*. Ponlo en `false` si solo quieres aceptar comandos de otros contactos.
+- `.menu` y los demás comandos aceptan mensajes desde *Mensaje para ti* y desde cualquier otro chat. La salida propia del bot se identifica para no crear bucles.
 - `.chat` guarda un contexto corto en `data/state.json`; `.clear` lo elimina. Ese estado y la sesión están ignorados por Git.
 - Si el bot deja de responder, revisa que Node siga activo, que la sesión no se haya cerrado y que la cuenta de AI/ML API tenga saldo/permisos para el modelo elegido.

@@ -24,6 +24,9 @@ const config = createConfig();
 const api = new AimlApiClient({ apiKey: config.apiKey });
 const state = new StateStore(config.dataFile);
 const activeRequests = new Set();
+// IDs de mensajes enviados por el bot. Permite aceptar comandos escritos desde la
+// cuenta vinculada sin volver a procesar las respuestas propias del bot.
+const botMessageIds = new Set();
 let reconnectTimer = null;
 let terminalQuestion = null;
 let pairingRequested = false;
@@ -68,7 +71,6 @@ function createConfig() {
     dailyLimit: positiveInteger(process.env.DAILY_LIMIT, 10),
     ownerNumbers: numberSet(process.env.OWNER_NUMBERS),
     premiumNumbers: numberSet(process.env.PREMIUM_NUMBERS),
-    allowSelfCommands: String(process.env.ALLOW_SELF_COMMANDS || 'true').toLowerCase() === 'true',
   };
 }
 
@@ -106,6 +108,8 @@ async function startWhatsApp() {
     logger: pino({ level: 'silent' }),
     markOnlineOnConnect: false,
     syncFullHistory: false,
+    // Necesario para recibir .menu y otros comandos enviados desde la cuenta vinculada.
+    emitOwnEvents: true,
     generateHighQualityLinkPreview: false,
   });
 
@@ -124,6 +128,7 @@ async function startWhatsApp() {
 
     if (connection === 'open') {
       console.log(`\n✓ ${config.botName} conectado a WhatsApp.`);
+      console.log(`[comandos] Listo. Envía ${config.prefix}menu desde cualquier chat, incluida la cuenta vinculada.`);
       closeQuestion();
       return;
     }
@@ -141,12 +146,10 @@ async function startWhatsApp() {
     }
   });
 
-  sock.ev.on('messages.upsert', ({ messages, type }) => {
+  sock.ev.on('messages.upsert', ({ messages }) => {
+    // No se filtra por `type`: Baileys puede entregar mensajes propios como
+    // "append" y mensajes nuevos como "notify". Ambos deben aceptar comandos.
     for (const message of messages) {
-      // Los mensajes enviados por la propia cuenta suelen llegar como "append".
-      // Se aceptan cuando ALLOW_SELF_COMMANDS está activo para que .menu funcione
-      // también desde "Mensaje para ti" en la cuenta vinculada.
-      if (type !== 'notify' && !(config.allowSelfCommands && message?.key?.fromMe)) continue;
       handleIncomingMessage(sock, message).catch((error) => console.error('[mensaje]', errorText(error)));
     }
   });
@@ -241,7 +244,9 @@ function closeQuestion() {
 
 async function handleIncomingMessage(sock, message) {
   if (!message?.message || !message?.key?.remoteJid) return;
-  if (message.key.fromMe && !config.allowSelfCommands) return;
+  // Ignora únicamente mensajes que este proceso acaba de enviar; los comandos
+  // escritos por la misma cuenta vinculada sí se procesan.
+  if (message.key.fromMe && botMessageIds.has(message.key.id)) return;
 
   const chatJid = message.key.remoteJid;
   if (isJidBroadcast(chatJid) || chatJid === 'status@broadcast') return;
@@ -252,6 +257,7 @@ async function handleIncomingMessage(sock, message) {
   const parsed = parseCommand(text);
   if (!parsed) return;
   const senderJid = message.key.participant || chatJid;
+  console.log(`[comando] ${config.prefix}${parsed.command} recibido de ${jidNumber(senderJid) || senderJid}`);
   const senderNumber = jidNumber(senderJid);
   const identity = senderJid || chatJid;
   const userName = shortText(message.pushName || senderNumber || 'Usuario', 80);
@@ -411,10 +417,11 @@ async function runImagine(context, prompt) {
     const image = await api.generateImage({ model: imageModel, prompt });
     const caption = `୨୧ ❏ ◇ ɪᴍᴀɢɪɴᴇ\n
 Modelo: ${imageModel}\nPrompt: ${shortText(prompt, 500)}`;
-    await context.sock.sendMessage(context.chatJid, {
+    const sent = await context.sock.sendMessage(context.chatJid, {
       image: image.url ? { url: image.url } : image.buffer,
       caption,
     }, { quoted: context.message });
+    rememberBotMessage(sent);
   });
 }
 
@@ -518,10 +525,21 @@ async function withUserRequest(context, task) {
 async function sendText(context, text) {
   const chunks = splitMessage(text);
   for (let index = 0; index < chunks.length; index += 1) {
-    await context.sock.sendMessage(
+    const sent = await context.sock.sendMessage(
       context.chatJid,
       { text: chunks[index] },
       index === 0 ? { quoted: context.message } : undefined,
     );
+    rememberBotMessage(sent);
+  }
+}
+
+function rememberBotMessage(sent) {
+  const id = sent?.key?.id;
+  if (!id) return;
+  botMessageIds.add(id);
+  // Evita que el registro en memoria crezca en ejecuciones largas.
+  if (botMessageIds.size > 500) {
+    botMessageIds.delete(botMessageIds.values().next().value);
   }
 }
