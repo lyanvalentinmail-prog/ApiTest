@@ -1,6 +1,6 @@
 export default {
   name: 'model',
-  category: 'Modelos AI/ML API',
+  category: 'Modelos del proveedor',
   usage: '[id]',
   description: 'Muestra o cambia el modelo de texto.',
   async execute(context, services) {

@@ -16,13 +16,16 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 
 import { AimlApiClient, isProbablyChatModel, isProbablyImageModel, modelCapabilities, resolveModel } from './lib/aimlapi.js';
+import { EdenAiClient } from './lib/edenai.js';
 import { buildMainMenu, errorText, jidNumber, normalizePhone, shortText, splitMessage } from './lib/format.js';
 import { StateStore } from './lib/store.js';
 import { getCommand, getMenuCommandGroups } from '../cmds/index.js';
 
 const startedAt = Date.now();
 const config = createConfig();
-const api = new AimlApiClient({ apiKey: config.apiKey });
+const api = config.provider === 'eden'
+  ? new EdenAiClient({ apiKey: config.apiKey })
+  : new AimlApiClient({ apiKey: config.apiKey });
 const state = new StateStore(config.dataFile);
 const activeRequests = new Set();
 // IDs de mensajes enviados por el bot. Permite aceptar comandos escritos desde la
@@ -49,6 +52,9 @@ function createConfig() {
   // --choose permite abrir el selector incluso si un .env antiguo aún contiene LINK_METHOD=qr.
   const linkMethod = wantsQr ? 'qr' : wantsPairing ? 'pairing' : wantsChooser ? 'ask' : configuredMethod;
   const pairingNumber = normalizePhone(pairingFromArgument || process.env.PAIRING_NUMBER || '');
+  const aimlApiKey = configuredApiKey();
+  const edenApiKey = configuredEdenApiKey();
+  const provider = configuredProvider({ aimlApiKey, edenApiKey });
 
   if (!prefix || prefix.length > 3) throw new Error('BOT_PREFIX debe tener entre 1 y 3 caracteres.');
   if (!['ask', 'qr', 'pairing'].includes(linkMethod)) {
@@ -56,9 +62,9 @@ function createConfig() {
   }
 
   return {
-    // AIMLAPI_API_KEY es el nombre recomendado. Se aceptan aliases comunes
-    // para que una configuración previa de Termux no deje al bot sin clave.
-    apiKey: configuredApiKey(),
+    provider,
+    // AIMLAPI_API_KEY y EDENAI_API_KEY son los nombres recomendados.
+    apiKey: provider === 'eden' ? edenApiKey : aimlApiKey,
     prefix,
     botName: process.env.BOT_NAME || 'NombreBot',
     ownerName: process.env.OWNER_NAME || 'Owner',
@@ -69,8 +75,8 @@ function createConfig() {
     pairingNumber,
     sessionDir: resolve(process.env.SESSION_DIR || 'sessions/baileys'),
     dataFile: resolve(process.env.DATA_FILE || 'data/state.json'),
-    defaultTextModel: process.env.DEFAULT_TEXT_MODEL || 'google/gemma-3-4b-it',
-    defaultImageModel: process.env.DEFAULT_IMAGE_MODEL || 'flux-pro',
+    defaultTextModel: process.env.DEFAULT_TEXT_MODEL || (provider === 'eden' ? 'google/gemini-2.5-flash' : 'google/gemma-3-4b-it'),
+    defaultImageModel: process.env.DEFAULT_IMAGE_MODEL || (provider === 'eden' ? 'image/generation/minimax' : 'flux-pro'),
     dailyLimit: positiveInteger(process.env.DAILY_LIMIT, 10),
     ownerNumbers: numberSet(process.env.OWNER_NUMBERS),
     premiumNumbers: numberSet(process.env.PREMIUM_NUMBERS),
@@ -85,6 +91,27 @@ function configuredApiKey() {
   ].map((value) => String(value || '').trim());
 
   return candidates.find((key) => key && !/^(pega_tu_clave_aqui|your_api_key|<your_aimlapi_key>)$/i.test(key)) || '';
+}
+
+function configuredEdenApiKey() {
+  const candidates = [
+    process.env.EDENAI_API_KEY,
+    process.env.EDEN_AI_API_KEY,
+    process.env.EDEN_API_KEY,
+  ].map((value) => String(value || '').trim());
+
+  return candidates.find((key) => key && !/^(pega_tu_clave_aqui|your_api_key|<your_eden_ai_api_key>)$/i.test(key)) || '';
+}
+
+function configuredProvider({ aimlApiKey, edenApiKey }) {
+  const requested = String(process.env.AI_PROVIDER || 'auto').toLowerCase();
+  if (!['auto', 'aimlapi', 'eden'].includes(requested)) {
+    throw new Error('AI_PROVIDER debe ser auto, aimlapi o eden.');
+  }
+  if (requested === 'eden') return 'eden';
+  if (requested === 'aimlapi') return 'aimlapi';
+  // En modo automático se prioriza Eden cuando una clave de Eden está configurada.
+  return edenApiKey ? 'eden' : 'aimlapi';
 }
 
 function readOption(args, option) {
@@ -141,6 +168,7 @@ async function startWhatsApp() {
 
     if (connection === 'open') {
       console.log(`\n✓ ${config.botName} conectado a WhatsApp.`);
+      console.log(`[IA] Proveedor activo: ${config.provider === 'eden' ? 'Eden AI' : 'AI/ML API'}.`);
       console.log(`[comandos] Listo. Envía ${config.prefix}menu desde cualquier chat, incluida la cuenta vinculada.`);
       closeQuestion();
       return;
@@ -491,7 +519,7 @@ async function runModels(context, query) {
       return sendText(context, `No encontré modelos con esa búsqueda. Prueba: ${config.prefix}models openai, ${config.prefix}models image o ${config.prefix}models all`);
     }
     const heading = showAll
-      ? imageOnly ? 'Todos los modelos de imagen' : 'Catálogo completo de AI/ML API'
+      ? imageOnly ? 'Todos los modelos de imagen' : `Catálogo completo de ${config.provider === 'eden' ? 'Eden AI' : 'AI/ML API'}`
       : imageOnly ? 'Modelos de imagen' : `Modelos encontrados${query ? `: ${query}` : ''}`;
     const lines = results.map((model, index) => {
       const imageTag = isProbablyImageModel(model) ? ' 🖼️' : '';

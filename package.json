@@ -13,7 +13,7 @@
     "link": "node src/index.js --choose",
     "qr": "node src/index.js --qr",
     "pair": "node src/index.js --pairing",
-    "check": "node --check src/index.js && node --check src/lib/aimlapi.js && node --check src/lib/store.js && node --check src/lib/format.js && node --check src/check-env.js && find cmds -type f -name '*.js' -exec node --check {} \\;",
+    "check": "node --check src/index.js && node --check src/lib/aimlapi.js && node --check src/lib/edenai.js && node --check src/lib/store.js && node --check src/lib/format.js && node --check src/check-env.js && find cmds -type f -name '*.js' -exec node --check {} \\;",
     "check:env": "node src/check-env.js"
   },
   "dependencies": {

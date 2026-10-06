@@ -1,8 +1,8 @@
-# ୨୧ AI — WhatsApp + Baileys + AI/ML API
+# ୨୧ AI — WhatsApp + Baileys + AI/ML API / Eden AI
 
-Bot de WhatsApp en Node.js compatible con **Baileys**, **QR**, **código de vinculación** y **Termux**. Usa el endpoint OpenAI-compatible de [AI/ML API](https://api.aimlapi.com/v1) para conversar, responder, corregir texto y generar imágenes.
+Bot de WhatsApp en Node.js compatible con **Baileys**, **QR**, **código de vinculación** y **Termux**. Soporta [AI/ML API](https://api.aimlapi.com/v1) y [Eden AI](https://api.edenai.run/v3) para conversar, responder, corregir texto y generar imágenes.
 
-> **Seguridad:** no se guarda ninguna clave real en este repositorio. Añade la tuya únicamente en `.env`, que está ignorado por Git. Si una clave se compartió en un chat, repositorio o captura, revócala/regénérala en el panel de AI/ML API antes de usarla.
+> **Seguridad:** no se guarda ninguna clave real en este repositorio. Añade la tuya únicamente en `.env`, que está ignorado por Git. Si una clave se compartió en un chat, repositorio o captura, revócala/regénérala desde el panel del proveedor antes de usarla.
 
 ## Características
 
@@ -16,14 +16,14 @@ Bot de WhatsApp en Node.js compatible con **Baileys**, **QR**, **código de vinc
   - `.imagine <prompt>`: generación de imagen para premium/owner.
 - Límites diarios para `.chat` y `.ask`; owner y premium no consumen límite.
 - Listas de owner y premium configurables por `.env`.
-- **Catálogo vivo de AI/ML API**: `.models` consulta `GET /v1/models`; no hay una lista fija que se vuelva obsoleta. Se puede seleccionar cualquier modelo de texto compatible y cualquier modelo de imagen detectado del catálogo.
+- **Catálogo vivo del proveedor activo**: `.models` consulta el catálogo de AI/ML API o Eden AI; no hay una lista fija que se vuelva obsoleta. Se puede seleccionar cualquier modelo de texto compatible y cualquier modelo de imagen detectado.
 - No registra la clave API ni credenciales de WhatsApp.
 
 ## Requisitos
 
 - Node.js **20 o superior**.
 - Una cuenta de WhatsApp que se vinculará como dispositivo.
-- Una clave de [AI/ML API](https://aimlapi.com/).
+- Una clave de [AI/ML API](https://aimlapi.com/) o [Eden AI](https://app.edenai.run/).
 
 ## Instalación local
 
@@ -34,13 +34,21 @@ npm install
 cp .env.example .env
 ```
 
-Edita `.env` y completa como mínimo:
+Edita `.env` y completa **un proveedor**:
 
 ```dotenv
+# AI/ML API
+AI_PROVIDER=aimlapi
 AIMLAPI_API_KEY=tu_clave_de_aimlapi
 ```
 
-No pongas comillas, no dejes espacios y **no subas `.env`**. El endpoint ya está programado como `https://api.aimlapi.com/v1/chat/completions`; en `.env` solo debe ir la clave, no el ejemplo de JavaScript ni `<YOUR_AIMLAPI_KEY>`.
+```dotenv
+# Eden AI
+AI_PROVIDER=eden
+EDENAI_API_KEY=tu_clave_de_eden
+```
+
+También puedes usar `AI_PROVIDER=auto`: si encuentra `EDENAI_API_KEY`, prioriza Eden; de lo contrario usa AI/ML API. No pongas comillas, no dejes espacios y **no subas `.env`**. En `.env` solo va la clave, no el ejemplo de JavaScript ni `<YOUR_API_KEY>`.
 
 Comprueba la configuración sin revelar la clave:
 
@@ -178,7 +186,7 @@ Aquí tienes todos mis comandos 👇
 | `.imagine <prompt>` | `.imagine un gato astronauta, estilo acuarela` | premium / owner |
 | `.clear` | `.clear` | normal |
 
-### Carpeta `cmds/` y modelos de AI/ML API
+### Carpeta `cmds/` y modelos de los proveedores
 
 Los comandos están organizados en la carpeta raíz `cmds/`:
 
@@ -190,17 +198,17 @@ cmds/
 └── system/   # menu y clear
 ```
 
-`.menu` se construye desde ese registro y muestra la lista completa de comandos disponibles. El bot no codifica una lista fija de modelos: la obtiene de `https://api.aimlapi.com/v1/models`, por lo que los nuevos modelos disponibles en AI/ML API aparecen sin editar el código.
+`.menu` se construye desde ese registro y muestra la lista completa de comandos disponibles. El bot no codifica una lista fija de modelos: obtiene el catálogo vivo de `https://api.aimlapi.com/v1/models` o `https://api.edenai.run/v3/models`, según el proveedor activo.
 
 ```text
 .models                     # primeros modelos de texto del catálogo vivo
 .models gemini              # busca IDs/aliases/capacidades
 .models image               # modelos detectados para generar imagen
-.models all                 # TODO el catálogo vivo de AI/ML API
+.models all                 # TODO el catálogo vivo del proveedor activo
 .models all image           # todos los modelos de imagen
 .model                      # muestra el modelo de texto actual
 .model openai/gpt-4o        # cambia el modelo de texto
-.imagemodel flux-pro        # cambia el modelo de imagen (premium/owner)
+.imagemodel image/generation/minimax  # Eden: cambia el modelo de imagen (premium/owner)
 ```
 
 El catálogo completo puede llegar en varios mensajes. `.model` permite seleccionar solo modelos compatibles con chat y `.imagemodel` solo modelos de imagen; las demás modalidades del catálogo se muestran con `.models all`, pero necesitan sus propios endpoints para utilizarse.
@@ -209,9 +217,11 @@ El catálogo completo puede llegar en varios mensajes. `.model` permite seleccio
 
 | Variable | Descripción | Predeterminado |
 | --- | --- | --- |
-| `AIMLAPI_API_KEY` | Clave privada de AI/ML API. Obligatoria. | — |
-| `DEFAULT_TEXT_MODEL` | Modelo inicial de chat/ask/grammar. | `google/gemma-3-4b-it` |
-| `DEFAULT_IMAGE_MODEL` | Modelo inicial de imagine. | `flux-pro` |
+| `AI_PROVIDER` | `auto`, `aimlapi` o `eden`. Auto prioriza Eden si hay clave Eden. | `auto` |
+| `AIMLAPI_API_KEY` | Clave privada de AI/ML API si usas ese proveedor. | — |
+| `EDENAI_API_KEY` | Clave privada de Eden AI si usas Eden. | — |
+| `DEFAULT_TEXT_MODEL` | Modelo inicial de chat/ask/grammar. | según proveedor |
+| `DEFAULT_IMAGE_MODEL` | Modelo inicial de imagine. | según proveedor |
 | `LINK_METHOD` | `ask` (selector), `qr` o `pairing`. | `ask` |
 | `PAIRING_NUMBER` | Número para código, con prefijo de país. | vacío |
 | `OWNER_NUMBERS` | Números internacionales separados por coma. | vacío |
@@ -236,7 +246,7 @@ Los números se escriben **sin `+`, guiones ni espacios**. Owner siempre se cons
 
 ## Notas operativas
 
-- El modelo de imagen por defecto puede tener coste. Revisa el catálogo y saldo de AI/ML API antes de habilitar premium.
+- El modelo de imagen por defecto puede tener coste. Revisa el catálogo y saldo del proveedor activo antes de habilitar premium.
 - `.menu` y los demás comandos aceptan mensajes desde *Mensaje para ti* y desde cualquier otro chat. La salida propia del bot se identifica para no crear bucles.
 - `.chat` guarda un contexto corto en `data/state.json`; `.clear` lo elimina. Ese estado y la sesión están ignorados por Git.
-- Si el bot deja de responder, revisa que Node siga activo, que la sesión no se haya cerrado y que la cuenta de AI/ML API tenga saldo/permisos para el modelo elegido.
+- Si el bot deja de responder, revisa que Node siga activo, que la sesión no se haya cerrado y que la cuenta del proveedor activo tenga saldo/permisos para el modelo elegido.

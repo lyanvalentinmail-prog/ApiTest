@@ -1,6 +1,6 @@
 export default {
   name: 'imagemodel',
-  category: 'Modelos AI/ML API',
+  category: 'Modelos del proveedor',
   usage: '[id]',
   description: 'Muestra o cambia el modelo de imagen. Ⓟ',
   async execute(context, services) {
