@@ -60,7 +60,7 @@ En una sesión nueva, ejecuta:
 npm start
 ```
 
-La terminal muestra:
+Si tu `.env` antiguo aún tiene `LINK_METHOD=qr`, usa `npm run link` para forzar el selector una vez. La terminal muestra:
 
 ```text
 ¿Cómo deseas vincular WhatsApp?

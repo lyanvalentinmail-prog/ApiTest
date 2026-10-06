@@ -39,8 +39,10 @@ function createConfig() {
   const pairingFromArgument = readOption(args, '--pairing') || readOption(args, '--pair');
   const wantsPairing = args.includes('--pairing') || args.includes('--pair') || Boolean(pairingFromArgument);
   const wantsQr = args.includes('--qr');
+  const wantsChooser = args.includes('--choose');
   const configuredMethod = String(process.env.LINK_METHOD || 'ask').toLowerCase();
-  const linkMethod = wantsQr ? 'qr' : wantsPairing ? 'pairing' : configuredMethod;
+  // --choose permite abrir el selector incluso si un .env antiguo aún contiene LINK_METHOD=qr.
+  const linkMethod = wantsQr ? 'qr' : wantsPairing ? 'pairing' : wantsChooser ? 'ask' : configuredMethod;
   const pairingNumber = normalizePhone(pairingFromArgument || process.env.PAIRING_NUMBER || '');
 
   if (!prefix || prefix.length > 3) throw new Error('BOT_PREFIX debe tener entre 1 y 3 caracteres.');

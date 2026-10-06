@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
+    "link": "node src/index.js --choose",
     "qr": "node src/index.js --qr",
     "pair": "node src/index.js --pairing",
     "check": "node --check src/index.js && node --check src/lib/aimlapi.js && node --check src/lib/store.js && node --check src/lib/format.js"
