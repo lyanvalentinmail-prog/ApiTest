@@ -1,0 +1,24 @@
+{
+  "name": "wa-aimlapi-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bot de WhatsApp con Baileys y AI/ML API, compatible con QR, código de vinculación y Termux.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "qr": "node src/index.js --qr",
+    "pair": "node src/index.js --pairing",
+    "check": "node --check src/index.js && node --check src/lib/aimlapi.js && node --check src/lib/store.js && node --check src/lib/format.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.14",
+    "dotenv": "^16.6.1",
+    "pino": "^9.11.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Secretos locales
+.env
+.env.*
+!.env.example
+
+# Sesión de WhatsApp: contiene credenciales privadas
+sessions/
+auth_info_baileys/
+
+# Estado local (límites, modelo e historial)
+data/
+
+# Logs
+*.log
+npm-debug.log*
