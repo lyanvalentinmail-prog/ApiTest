@@ -18,6 +18,7 @@ import qrcode from 'qrcode-terminal';
 import { AimlApiClient, isProbablyChatModel, isProbablyImageModel, modelCapabilities, resolveModel } from './lib/aimlapi.js';
 import { buildMainMenu, errorText, jidNumber, normalizePhone, shortText, splitMessage } from './lib/format.js';
 import { StateStore } from './lib/store.js';
+import { getCommand, getMenuCommandGroups } from '../cmds/index.js';
 
 const startedAt = Date.now();
 const config = createConfig();
@@ -301,13 +302,8 @@ function parseCommand(text) {
   const withoutPrefix = text.slice(config.prefix.length).trim();
   if (!withoutPrefix) return { command: 'menu', args: '' };
   const [first, ...rest] = withoutPrefix.split(/\s+/);
-  const aliases = {
-    menu: 'menu', help: 'menu', ayuda: 'menu',
-    chat: 'chat', ask: 'ask', grammar: 'grammar', imagine: 'imagine',
-    model: 'model', models: 'models', imagemodel: 'imagemodel', clear: 'clear',
-  };
-  const command = aliases[first.toLowerCase()];
-  return command ? { command, args: rest.join(' ').trim() } : null;
+  const command = getCommand(first);
+  return command ? { command: command.name, args: rest.join(' ').trim() } : null;
 }
 
 function formatUptime(milliseconds) {
@@ -325,39 +321,35 @@ function formatUptime(milliseconds) {
 }
 
 async function runCommand(context) {
-  const { command, args } = context;
-  switch (command) {
-    case 'menu':
-      return sendText(context, buildMainMenu({
-        botName: config.botName,
-        ownerName: config.ownerName,
-        version: config.botVersion,
-        mode: config.botMode,
-        uptime: formatUptime(Date.now() - startedAt),
-        userName: context.userName || 'Usuario',
-        prefix: config.prefix,
-        totalCommands: config.menuTotal,
-      }));
-    case 'chat':
-      return runChat(context, args);
-    case 'ask':
-      return runAsk(context, args);
-    case 'grammar':
-      return runGrammar(context, args);
-    case 'imagine':
-      return runImagine(context, args);
-    case 'model':
-      return runModel(context, args);
-    case 'models':
-      return runModels(context, args);
-    case 'imagemodel':
-      return runImageModel(context, args);
-    case 'clear':
-      await state.clearHistory(context.identity);
-      return sendText(context, '୨୧ Contexto de .chat eliminado.');
-    default:
-      return undefined;
-  }
+  const command = getCommand(context.command);
+  if (!command) return undefined;
+
+  return command.execute(context, {
+    state,
+    sendText,
+    runMenu,
+    runChat,
+    runAsk,
+    runGrammar,
+    runImagine,
+    runModel,
+    runImageModel,
+    runModels,
+  });
+}
+
+async function runMenu(context) {
+  return sendText(context, buildMainMenu({
+    botName: config.botName,
+    ownerName: config.ownerName,
+    version: config.botVersion,
+    mode: config.botMode,
+    uptime: formatUptime(Date.now() - startedAt),
+    userName: context.userName || 'Usuario',
+    prefix: config.prefix,
+    totalCommands: config.menuTotal,
+    commandGroups: getMenuCommandGroups(),
+  }));
 }
 
 async function runChat(context, prompt) {
@@ -480,26 +472,36 @@ async function validateModel(requested, image) {
 async function runModels(context, query) {
   await withUserRequest(context, async () => {
     const models = await api.listModels();
-    const filter = query.toLowerCase().trim();
-    const imageOnly = ['image', 'imagen', 'imagine'].includes(filter);
-    const results = models
-      .filter((model) => {
-        if (imageOnly) return isProbablyImageModel(model);
-        if (!isProbablyChatModel(model)) return false;
-        if (!filter) return true;
-        return `${model.id || ''} ${(model.aliases || []).join(' ')} ${modelCapabilities(model)}`.toLowerCase().includes(filter);
-      })
-      .slice(0, 25);
+    const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const showAll = tokens.includes('all') || tokens.includes('todos');
+    const imageOnly = tokens.some((token) => ['image', 'imagen', 'imagine'].includes(token));
+    const search = tokens.filter((token) => !['all', 'todos', 'image', 'imagen', 'imagine'].includes(token)).join(' ');
+    const fingerprint = (model) => `${model.id || ''} ${(model.aliases || []).join(' ')} ${modelCapabilities(model)}`.toLowerCase();
+
+    const matching = models.filter((model) => {
+      if (imageOnly && !isProbablyImageModel(model)) return false;
+      // .models all muestra todo el catálogo AI/ML API, incluso modalidades
+      // que no se usan con los comandos chat/imagine.
+      if (!imageOnly && !showAll && !isProbablyChatModel(model)) return false;
+      return !search || fingerprint(model).includes(search);
+    });
+    const results = showAll ? matching : matching.slice(0, 25);
 
     if (!results.length) {
-      return sendText(context, 'No encontré modelos con esa búsqueda. Prueba: .models openai, .models gemini o .models image');
+      return sendText(context, `No encontré modelos con esa búsqueda. Prueba: ${config.prefix}models openai, ${config.prefix}models image o ${config.prefix}models all`);
     }
-    const heading = imageOnly ? 'Modelos de imagen' : `Modelos encontrados${filter ? `: ${query}` : ''}`;
+    const heading = showAll
+      ? imageOnly ? 'Todos los modelos de imagen' : 'Catálogo completo de AI/ML API'
+      : imageOnly ? 'Modelos de imagen' : `Modelos encontrados${query ? `: ${query}` : ''}`;
     const lines = results.map((model, index) => {
       const imageTag = isProbablyImageModel(model) ? ' 🖼️' : '';
       return `${index + 1}. ${model.id}${imageTag}`;
     });
-    return sendText(context, `୨୧ ${heading} (${results.length}${results.length === 25 ? '+' : ''})\n\n${lines.join('\n')}\n\nSelecciona con ${config.prefix}${imageOnly ? 'imagemodel' : 'model'} <id>.`);
+    const selector = imageOnly ? `${config.prefix}imagemodel <id>` : `${config.prefix}model <id>`;
+    const note = showAll
+      ? `\n\nSe enviará en varios mensajes si el catálogo es largo. Selecciona con ${selector}.`
+      : `\n\nSelecciona con ${selector}. Usa ${config.prefix}models all para ver todo el catálogo.`;
+    return sendText(context, `୨୧ ${heading} (${results.length}${!showAll && results.length === 25 ? '+' : ''})\n\n${lines.join('\n')}${note}`);
   });
 }
 

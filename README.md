@@ -178,20 +178,32 @@ Aquí tienes todos mis comandos 👇
 | `.imagine <prompt>` | `.imagine un gato astronauta, estilo acuarela` | premium / owner |
 | `.clear` | `.clear` | normal |
 
-### Modelos de AI/ML API
+### Carpeta `cmds/` y modelos de AI/ML API
 
-El bot no codifica una lista de modelos: la obtiene de `https://api.aimlapi.com/v1/models` y guarda la elección por usuario.
+Los comandos están organizados en la carpeta raíz `cmds/`:
 
 ```text
-.models                     # primeros modelos del catálogo vivo
+cmds/
+├── ai/       # chat, ask y grammar
+├── image/    # imagine
+├── models/   # catálogo y selección de todos los modelos
+└── system/   # menu y clear
+```
+
+`.menu` se construye desde ese registro y muestra la lista completa de comandos disponibles. El bot no codifica una lista fija de modelos: la obtiene de `https://api.aimlapi.com/v1/models`, por lo que los nuevos modelos disponibles en AI/ML API aparecen sin editar el código.
+
+```text
+.models                     # primeros modelos de texto del catálogo vivo
 .models gemini              # busca IDs/aliases/capacidades
 .models image               # modelos detectados para generar imagen
+.models all                 # TODO el catálogo vivo de AI/ML API
+.models all image           # todos los modelos de imagen
 .model                      # muestra el modelo de texto actual
 .model openai/gpt-4o        # cambia el modelo de texto
 .imagemodel flux-pro        # cambia el modelo de imagen (premium/owner)
 ```
 
-Así quedan disponibles los modelos de chat e imagen que AI/ML API mantenga activos en ese momento, sin actualizar el código. La compatibilidad concreta (precio, disponibilidad, moderación, formatos o parámetros) depende del modelo y de los créditos de tu cuenta AI/ML API. Los modelos de audio, vídeo, embeddings u otras modalidades no usan los cuatro comandos de este bot; requieren un flujo y endpoint específicos.
+El catálogo completo puede llegar en varios mensajes. `.model` permite seleccionar solo modelos compatibles con chat y `.imagemodel` solo modelos de imagen; las demás modalidades del catálogo se muestran con `.models all`, pero necesitan sus propios endpoints para utilizarse.
 
 ## Configuración
 

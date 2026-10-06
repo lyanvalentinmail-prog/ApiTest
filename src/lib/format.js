@@ -1,6 +1,6 @@
 /** Construye el menú principal con datos reales de la sesión, sin exponer variables internas de Termux. */
-export function buildMainMenu({ botName, ownerName, version, mode, uptime, userName, prefix, totalCommands }) {
-  return `¡Hola, *${userName}* 🎌
+export function buildMainMenu({ botName, ownerName, version, mode, uptime, userName, prefix, totalCommands, commandGroups = [] }) {
+  const header = `¡Hola, *${userName}* 🎌
 
 *${botName}* está listo para acompañarte durante el día 🎐
 
@@ -28,6 +28,23 @@ Aquí tienes todos mis comandos 👇
 ║🗾 Total de comandos ☇ *${totalCommands}*
 
 ╰━━━━━━━━━━━━━━━━━━━⬣`;
+
+  return `${header}${formatCommandGroups(commandGroups, prefix)}`;
+}
+
+function formatCommandGroups(groups, prefix) {
+  if (!groups.length) return '';
+  const sections = groups.map(({ category, commands }) => {
+    const rows = commands.map((command) => {
+      const usage = command.usage ? ` ${command.usage}` : '';
+      const aliases = (command.aliases || []).map((alias) => `${prefix}${alias}`).join(' | ');
+      const aliasText = aliases ? `\n│   Alias: ${aliases}` : '';
+      return `│ • *${prefix}${command.name}${usage}*\n│   ${command.description}${aliasText}`;
+    });
+    return `╭──〔 *${category}* 〕\n${rows.join('\n│\n')}\n╰━━━━━━━━━━━━━━━━━━━⬣`;
+  });
+
+  return `\n\n*LISTA COMPLETA DE COMANDOS*\n\n${sections.join('\n\n')}`;
 }
 
 /** Divide texto para no sobrepasar el límite de mensaje de WhatsApp. */
