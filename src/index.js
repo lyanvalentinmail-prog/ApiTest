@@ -55,7 +55,9 @@ function createConfig() {
   }
 
   return {
-    apiKey: process.env.AIMLAPI_API_KEY,
+    // AIMLAPI_API_KEY es el nombre recomendado. Se aceptan aliases comunes
+    // para que una configuración previa de Termux no deje al bot sin clave.
+    apiKey: configuredApiKey(),
     prefix,
     botName: process.env.BOT_NAME || 'NombreBot',
     ownerName: process.env.OWNER_NAME || 'Owner',
@@ -72,6 +74,16 @@ function createConfig() {
     ownerNumbers: numberSet(process.env.OWNER_NUMBERS),
     premiumNumbers: numberSet(process.env.PREMIUM_NUMBERS),
   };
+}
+
+function configuredApiKey() {
+  const candidates = [
+    process.env.AIMLAPI_API_KEY,
+    process.env.AIMLAPI_KEY,
+    process.env.AI_ML_API_KEY,
+  ].map((value) => String(value || '').trim());
+
+  return candidates.find((key) => key && !/^(pega_tu_clave_aqui|your_api_key|<your_aimlapi_key>)$/i.test(key)) || '';
 }
 
 function readOption(args, option) {

@@ -40,7 +40,13 @@ Edita `.env` y completa como mínimo:
 AIMLAPI_API_KEY=tu_clave_de_aimlapi
 ```
 
-No pongas comillas, no dejes espacios y **no subas `.env`**.
+No pongas comillas, no dejes espacios y **no subas `.env`**. El endpoint ya está programado como `https://api.aimlapi.com/v1/chat/completions`; en `.env` solo debe ir la clave, no el ejemplo de JavaScript ni `<YOUR_AIMLAPI_KEY>`.
+
+Comprueba la configuración sin revelar la clave:
+
+```bash
+npm run check:env
+```
 
 Valida la sintaxis antes de arrancar:
 

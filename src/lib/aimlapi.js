@@ -11,8 +11,8 @@ export class AimlApiError extends Error {
 /** Cliente pequeño para los endpoints OpenAI-compatibles de AI/ML API. */
 export class AimlApiClient {
   constructor({ apiKey, baseUrl = DEFAULT_BASE_URL }) {
-    if (!apiKey || apiKey === 'pega_tu_clave_aqui') {
-      throw new Error('Falta AIMLAPI_API_KEY en el archivo .env.');
+    if (!apiKey || /^(pega_tu_clave_aqui|your_api_key|<your_aimlapi_key>)$/i.test(String(apiKey).trim())) {
+      throw new Error('No encontré una clave de AI/ML API. En la carpeta del proyecto crea .env con: AIMLAPI_API_KEY=tu_clave_real. Ejecuta npm run check:env para comprobarla sin mostrarla.');
     }
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/$/, '');
