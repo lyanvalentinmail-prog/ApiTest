@@ -1,30 +1,34 @@
-export const MENU = `୨୧ ❏ ◇ ᴀɪ
+/** Construye el menú principal con datos reales de la sesión, sin exponer variables internas de Termux. */
+export function buildMainMenu({ botName, ownerName, version, mode, uptime, userName, prefix, totalCommands }) {
+  return `¡Hola, *${userName}* 🎌
 
-┊ ✿ .ᴄʜᴀᴛ <ᴍᴇɴꜱᴀᴊᴇ> Ⓛ
+*${botName}* está listo para acompañarte durante el día 🎐
 
-┊ ✿ .ᴀꜱᴋ <ᴘʀᴇɢᴜɴᴛᴀ> Ⓛ
+Aquí tienes todos mis comandos 👇
 
-┊ ✿ .ɢʀᴀᴍᴍᴀʀ <ᴛᴇxᴛᴏ>
 
-┊ ✿ .ɪᴍᴀɢɪɴᴇ <ᴘʀᴏᴍᴘᴛ> Ⓟ
+╭──( *${botName}*)
 
-୨୧
+║🎌 Nombre del bot ☇ *${botName}*
 
-ᴛᴏᴛᴀʟ : 4 ꜰɪᴛᴜʀ
+│⛩️ Propietario ☇ *${ownerName}*
 
-Ⓟ ᴘʀᴇᴍɪᴜᴍ Ⓛ ʟɪᴍɪᴛ Ⓞ ᴏᴡɴᴇʀ Ⓐ ᴀᴅᴍɪɴ`;
+║🏮 Versión ☇ *${version}*
 
-export const EXTRA_HELP = `
+│🍡 Modo ☇ *${mode}*
 
-*Modelos AI/ML API (catálogo en vivo)*
-• ${".model"} — muestra tu modelo de texto actual.
-• ${".model <id>"} — usa cualquier modelo de texto del catálogo.
-• ${".models [búsqueda]"} — busca modelos disponibles ahora.
-• ${".imagemodel <id>"} — selecciona el modelo de imagen para .imagine.
-• ${".clear"} — borra tu contexto de .chat.
+║🎴 Estado ☇ *Activo*
 
-Ejemplo: .model openai/gpt-4o
-Los comandos de imagen son premium; owner siempre tiene acceso.`;
+│🎐 Tiempo activo ☇ *${uptime}*
+
+║🍙 Usuario ☇ *${userName}*
+
+│🎋 Prefijo ☇ *${prefix}*
+
+║🗾 Total de comandos ☇ *${totalCommands}*
+
+╰━━━━━━━━━━━━━━━━━━━⬣`;
+}
 
 /** Divide texto para no sobrepasar el límite de mensaje de WhatsApp. */
 export function splitMessage(text, maxLength = 3500) {

@@ -16,9 +16,10 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 
 import { AimlApiClient, isProbablyChatModel, isProbablyImageModel, modelCapabilities, resolveModel } from './lib/aimlapi.js';
-import { MENU, EXTRA_HELP, errorText, jidNumber, normalizePhone, shortText, splitMessage } from './lib/format.js';
+import { buildMainMenu, errorText, jidNumber, normalizePhone, shortText, splitMessage } from './lib/format.js';
 import { StateStore } from './lib/store.js';
 
+const startedAt = Date.now();
 const config = createConfig();
 const api = new AimlApiClient({ apiKey: config.apiKey });
 const state = new StateStore(config.dataFile);
@@ -53,7 +54,11 @@ function createConfig() {
   return {
     apiKey: process.env.AIMLAPI_API_KEY,
     prefix,
-    botName: process.env.BOT_NAME || '୨୧ AI',
+    botName: process.env.BOT_NAME || 'NombreBot',
+    ownerName: process.env.OWNER_NAME || 'Owner',
+    botVersion: process.env.BOT_VERSION || '1.0.0',
+    botMode: process.env.BOT_MODE || 'Público',
+    menuTotal: positiveInteger(process.env.MENU_TOTAL, 136),
     linkMethod,
     pairingNumber,
     sessionDir: resolve(process.env.SESSION_DIR || 'sessions/baileys'),
@@ -63,7 +68,7 @@ function createConfig() {
     dailyLimit: positiveInteger(process.env.DAILY_LIMIT, 10),
     ownerNumbers: numberSet(process.env.OWNER_NUMBERS),
     premiumNumbers: numberSet(process.env.PREMIUM_NUMBERS),
-    allowSelfCommands: String(process.env.ALLOW_SELF_COMMANDS || 'false').toLowerCase() === 'true',
+    allowSelfCommands: String(process.env.ALLOW_SELF_COMMANDS || 'true').toLowerCase() === 'true',
   };
 }
 
@@ -137,8 +142,11 @@ async function startWhatsApp() {
   });
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
-    if (type !== 'notify') return;
     for (const message of messages) {
+      // Los mensajes enviados por la propia cuenta suelen llegar como "append".
+      // Se aceptan cuando ALLOW_SELF_COMMANDS está activo para que .menu funcione
+      // también desde "Mensaje para ti" en la cuenta vinculada.
+      if (type !== 'notify' && !(config.allowSelfCommands && message?.key?.fromMe)) continue;
       handleIncomingMessage(sock, message).catch((error) => console.error('[mensaje]', errorText(error)));
     }
   });
@@ -246,12 +254,13 @@ async function handleIncomingMessage(sock, message) {
   const senderJid = message.key.participant || chatJid;
   const senderNumber = jidNumber(senderJid);
   const identity = senderJid || chatJid;
+  const userName = shortText(message.pushName || senderNumber || 'Usuario', 80);
   const owner = config.ownerNumbers.has(senderNumber);
   const premium = owner || config.premiumNumbers.has(senderNumber);
 
   try {
     await sock.sendPresenceUpdate('composing', chatJid).catch(() => {});
-    await runCommand({ sock, message, chatJid, identity, owner, premium, ...parsed });
+    await runCommand({ sock, message, chatJid, identity, userName, owner, premium, ...parsed });
   } catch (error) {
     console.error('[comando]', errorText(error));
     await sendText({ sock, message, chatJid }, `୨୧ No pude completar el comando.\n${errorText(error)}`);
@@ -283,11 +292,34 @@ function parseCommand(text) {
   return command ? { command, args: rest.join(' ').trim() } : null;
 }
 
+function formatUptime(milliseconds) {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const remainingSeconds = seconds % 60;
+  const parts = [];
+  if (days) parts.push(`${days}d`);
+  if (hours || days) parts.push(`${hours}h`);
+  if (minutes || hours || days) parts.push(`${minutes}m`);
+  parts.push(`${remainingSeconds}s`);
+  return parts.join(' ');
+}
+
 async function runCommand(context) {
   const { command, args } = context;
   switch (command) {
     case 'menu':
-      return sendText(context, `${MENU}${EXTRA_HELP}`);
+      return sendText(context, buildMainMenu({
+        botName: config.botName,
+        ownerName: config.ownerName,
+        version: config.botVersion,
+        mode: config.botMode,
+        uptime: formatUptime(Date.now() - startedAt),
+        userName: context.userName || 'Usuario',
+        prefix: config.prefix,
+        totalCommands: config.menuTotal,
+      }));
     case 'chat':
       return runChat(context, args);
     case 'ask':

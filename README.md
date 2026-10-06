@@ -129,24 +129,37 @@ Usa `Ctrl+B` y después `D` para dejar la sesión corriendo; vuelve con `tmux at
 
 ## Menú enviado por el bot
 
-Envía `.` o `.menu`:
+Envía `.` o `.menu`. El encabezado usa los datos configurados en `.env` y muestra el usuario, tiempo real activo y el prefijo correcto del bot:
 
 ```text
-୨୧ ❏ ◇ ᴀɪ
+¡Hola, *Usuario* 🎌
 
-┊ ✿ .ᴄʜᴀᴛ <ᴍᴇɴꜱᴀᴊᴇ> Ⓛ
+*NombreBot* está listo para acompañarte durante el día 🎐
 
-┊ ✿ .ᴀꜱᴋ <ᴘʀᴇɢᴜɴᴛᴀ> Ⓛ
+Aquí tienes todos mis comandos 👇
 
-┊ ✿ .ɢʀᴀᴍᴍᴀʀ <ᴛᴇxᴛᴏ>
 
-┊ ✿ .ɪᴍᴀɢɪɴᴇ <ᴘʀᴏᴍᴘᴛ> Ⓟ
+╭──( *NombreBot*)
 
-୨୧
+║🎌 Nombre del bot ☇ *NombreBot*
 
-ᴛᴏᴛᴀʟ : 4 ꜰɪᴛᴜʀ
+│⛩️ Propietario ☇ *Owner*
 
-Ⓟ ᴘʀᴇᴍɪᴜᴍ Ⓛ ʟɪᴍɪᴛ Ⓞ ᴏᴡɴᴇʀ Ⓐ ᴀᴅᴍɪɴ
+║🏮 Versión ☇ *1.0.0*
+
+│🍡 Modo ☇ *Público*
+
+║🎴 Estado ☇ *Activo*
+
+│🎐 Tiempo activo ☇ *19s*
+
+║🍙 Usuario ☇ *Usuario*
+
+│🎋 Prefijo ☇ *.*
+
+║🗾 Total de comandos ☇ *136*
+
+╰━━━━━━━━━━━━━━━━━━━⬣
 ```
 
 ### Comandos principales
@@ -186,7 +199,12 @@ Así quedan disponibles los modelos de chat e imagen que AI/ML API mantenga acti
 | `OWNER_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `PREMIUM_NUMBERS` | Números internacionales separados por coma. | vacío |
 | `DAILY_LIMIT` | Usos diarios de chat/ask para no premium. | `10` |
-| `ALLOW_SELF_COMMANDS` | Permite comandos desde la propia cuenta vinculada. | `false` |
+| `ALLOW_SELF_COMMANDS` | Permite comandos desde la propia cuenta vinculada / Mensaje para ti. | `true` |
+| `BOT_NAME` | Nombre mostrado en `.menu`. | `NombreBot` |
+| `OWNER_NAME` | Propietario mostrado en `.menu`. | `Owner` |
+| `BOT_VERSION` | Versión mostrada en `.menu`. | `1.0.0` |
+| `BOT_MODE` | Modo mostrado en `.menu`. | `Público` |
+| `MENU_TOTAL` | Total decorativo mostrado en `.menu`. | `136` |
 | `BOT_PREFIX` | Prefijo de comandos. (No uses `PREFIX`: Termux reserva esa variable.) | `.` |
 
 Ejemplo de permisos:
@@ -202,6 +220,6 @@ Los números se escriben **sin `+`, guiones ni espacios**. Owner siempre se cons
 ## Notas operativas
 
 - El modelo de imagen por defecto puede tener coste. Revisa el catálogo y saldo de AI/ML API antes de habilitar premium.
-- Para ejecutar comandos desde *Mensaje para ti*, usa `ALLOW_SELF_COMMANDS=true`; déjalo en `false` normalmente para no procesar mensajes enviados por el propio bot.
+- `ALLOW_SELF_COMMANDS=true` viene activo para que `.menu` y los demás comandos funcionen desde *Mensaje para ti*. Ponlo en `false` si solo quieres aceptar comandos de otros contactos.
 - `.chat` guarda un contexto corto en `data/state.json`; `.clear` lo elimina. Ese estado y la sesión están ignorados por Git.
 - Si el bot deja de responder, revisa que Node siga activo, que la sesión no se haya cerrado y que la cuenta de AI/ML API tenga saldo/permisos para el modelo elegido.
